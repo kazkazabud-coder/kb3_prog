@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title> druhej Web </title>
+    </head>
+    <body>
+       <p> toto je program </p>
+       <img src="images\GitHub_Invertocat_Logo.svg" alt="logo githubu"
+       width="256
+     px">
+     <p Repozitar je></p> <a href="https://github.com/kazkazabud-coder/kb3_prog">dostupny zde</a>
+       
+    </body>
+</html>
