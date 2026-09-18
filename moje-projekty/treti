@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title> druhej Web </title>
+    </head>
+    <body>
+       <p> toto je program </p>
+       <br>
+       <p>druhrj odstsvec</p><br> a dalsi radek</p>
+       <p>github
+        <a href="https://github.com/kazkazabud-coder/kb3_prog">
+            najdete zde 
+        </a>
+       </p>
+
+       <br><hr width="200px"><br>
+       <h2>Stylizace textu</h2>
+       <p>
+        <b>tucny text</b>
+        <i>kurziva</i>
+        <u>podtrzeni</u>
+       </p>
+     
+       
+    </body>
+</html>
