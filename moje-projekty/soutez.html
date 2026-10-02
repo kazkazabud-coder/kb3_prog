@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="cs">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>COLTRUN — Pouštní výzva</title>
+	<style>
+		:root{--ink:#18252b;--sand:#fff4d8;--orange:#f0784b;--mint:#b9e5c5;--night:#243747}
+		*{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 20% 10%,#ffe6a8,transparent 28%),linear-gradient(145deg,#f9a66c,#f7d68a 55%,#d4f0cb);font-family:system-ui,sans-serif;color:var(--ink);padding:20px}
+		.wrap{width:min(100%,980px);background:#fffaf0;border:4px solid var(--ink);border-radius:28px;box-shadow:10px 12px 0 var(--ink);overflow:hidden}
+		header{display:flex;justify-content:space-between;align-items:center;padding:18px 26px;background:var(--ink);color:#fffaf0} h1{margin:0;font-size:clamp(1.5rem,4vw,2.5rem);letter-spacing:-1px} h1 span{color:#ffbd69}.stats{display:flex;gap:12px;text-align:right}.stat b{display:block;font-size:1.35rem;color:#ffbd69}.stat small{font-size:.7rem;opacity:.7;text-transform:uppercase;letter-spacing:1px}
+		main{padding:22px 26px 28px}.intro{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:16px}.intro p{margin:3px 0 0;color:#637177}.hint{font-size:.86rem;text-align:right;color:#637177}.game{position:relative;overflow:hidden;border:3px solid var(--ink);border-radius:18px;background:linear-gradient(#8bd2dc 0 62%,#f6ca76 62%);box-shadow:inset 0 -14px #d49a59}
+		canvas{display:block;width:100%;height:auto;cursor:pointer}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#18252b99;color:white;text-align:center}.card{background:#fffaf0;color:var(--ink);padding:22px 30px;border:3px solid var(--ink);border-radius:17px;box-shadow:6px 7px 0 var(--ink)}.card h2{margin:0 0 6px}.card p{margin:0 0 15px;color:#637177}button{border:3px solid var(--ink);border-radius:12px;padding:11px 21px;background:var(--orange);color:white;font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 4px 0 var(--ink)}button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}.hidden{display:none}.tips{display:flex;justify-content:space-between;gap:12px;margin-top:16px;color:#637177;font-size:.85rem}.badge{background:var(--mint);padding:7px 12px;border-radius:99px;color:#285442;font-weight:700}
+		select{border:2px solid var(--ink);border-radius:8px;padding:5px 8px;background:#fffaf0;color:var(--ink);font-weight:700}
+		@media(max-width:600px){header{padding:15px}.stats{gap:7px}.intro{display:block}.hint{text-align:left;margin-top:8px}.tips{display:block}.badge{display:inline-block;margin-top:8px}}
+	</style>
+</head>
+<body>
+	<section class="wrap">
+		<header><h1>🔫 COLT<span>RUN</span></h1><div class="stats"><div class="stat"><b id="score">00000</b><small>skóre</small></div><div class="stat"><b id="best">00000</b><small>rekord</small></div></div></header>
+		<main>
+			<div class="intro"><div><strong>Pouštní výzva</strong><p>Pomoz Coltovi přeskočit Spikea, sbírej hvězdy a přež co nejdéle.</p></div><div class="hint"><label for="difficulty">Obtížnost:</label> <select id="difficulty"><option value="easy">Lehká</option><option value="normal" selected>Normální</option><option value="hard">Těžká</option></select><br>Mezerník / ↑ / kliknutí = skok</div></div>
+			<div class="game"><canvas id="game" width="900" height="360" aria-label="Hra ColtRun"></canvas><div id="overlay" class="overlay"><div class="card"><h2 id="title">Připraven na běh?</h2><p id="message">Coltovo dobrodružství začíná.</p><button id="start">START HRY</button></div></div></div>
+			<div class="tips"><span>💡 Tip: dvojskok ti zachrání kůži před Spikeem.</span><span class="badge">⚡ Rychlost roste s každým metrem</span></div>
+		</main>
+	</section>
+	<script>
+		const c=document.querySelector('#game'),x=c.getContext('2d'),scoreEl=document.querySelector('#score'),bestEl=document.querySelector('#best'),overlay=document.querySelector('#overlay'),title=document.querySelector('#title'),message=document.querySelector('#message'),start=document.querySelector('#start'),difficulty=document.querySelector('#difficulty');
+		const colt=new Image();
+		colt.src='https://static.wikia.nocookie.net/brawlstars/images/f/fd/Colt_Skin-Handsome.png/revision/latest/scale-to-width-down/250?cb=20230706155354';
+		const spikeSources=['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY_5OrSN3Ql3cDVZ7GVO3VMf97gqVURaGZGJRYbzV5LA&s=10','https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQ4Fq-kgxRmyzEfj-y6JXlnWhqHDQn4wRbTaR4gfT1oQ&s=10','https://static.metaforge.app/brawlstars/skins/spike_mask_spike_001__AFfdkcQqnE93W2aXnJT4__norm.webp'];
+		const spikes=spikeSources.map(src=>{const image=new Image();image.src=src;return image});
+		const modes={easy:{speed:5,gravity:.58,spawn:.012},normal:{speed:6,gravity:.65,spawn:.018},hard:{speed:7.5,gravity:.74,spawn:.025}};
+		const ground=286;
+		let d={x:100,y:ground-60,w:55,h:60,vy:0,jumps:0,rotation:0,scale:1},obstacles=[],stars=[],particles=[],score=0,best=+localStorage.coltBest||0,speed=6,running=false,last=0,deathTimer=0;
+		bestEl.textContent=String(best).padStart(5,'0');
+		function reset(){const mode=modes[difficulty.value];d={x:100,y:ground-60,w:55,h:60,vy:0,jumps:0,rotation:0,scale:1};obstacles=[];stars=[];particles=[];score=0;speed=mode.speed;last=0;deathTimer=0;running=true;overlay.classList.add('hidden');requestAnimationFrame(loop)}
+		function jump(){if(!running)return reset();if(d.jumps<2){d.vy=-13;d.jumps++;burst(d.x+28,d.y+58,'#fff1b1',8)}}
+		function burst(px,py,col,n){for(let i=0;i<n;i++)particles.push({x:px,y:py,vx:(Math.random()-.5)*7,vy:-Math.random()*6-1,a:1,col,size:Math.random()*5+2})}
+		function draw(){x.clearRect(0,0,c.width,c.height);x.fillStyle='#8bd2dc';x.fillRect(0,0,c.width,c.height);
+			x.fillStyle='#ffe28b';x.beginPath();x.arc(755,66,38,0,7);x.fill();x.fillStyle='#fff4d8';for(const q of [[160,70,30],[190,70,22],[710,130,25]]){x.beginPath();x.arc(q[0],q[1],q[2],0,7);x.fill()}
+			x.fillStyle='#eab866';x.fillRect(0,ground,c.width,c.height-ground);x.strokeStyle='#c9924c';x.lineWidth=3;for(let i=0;i<18;i++){let z=(i*73-(score*speed/18)%73);x.beginPath();x.moveTo(z,ground+15);x.lineTo(z+25,ground+15);x.stroke()}
+			x.save();x.translate(d.x+27,d.y+30);x.rotate(d.rotation);x.scale(d.scale,d.scale);if(colt.complete&&colt.naturalWidth)x.drawImage(colt,-30,-35,60,70);else{x.fillStyle='#315b4e';x.fillRect(-20,-28,40,55)}x.restore();
+			obstacles.forEach(o=>{const image=spikes[o.variant];if(image.complete&&image.naturalWidth)x.drawImage(image,o.x-6,o.y-8,o.w+12,o.h+12);else{x.fillStyle='#37885d';x.fillRect(o.x,o.y,o.w,o.h)}});
+			stars.forEach(s=>{x.fillStyle='#fff1a5';x.beginPath();for(let i=0;i<10;i++){let a=i*Math.PI/5-Math.PI/2,r=i%2?5:11;x.lineTo(s.x+Math.cos(a)*r,s.y+Math.sin(a)*r)}x.fill()});particles.forEach(p=>{x.globalAlpha=p.a;x.fillStyle=p.col;x.fillRect(p.x,p.y,p.size,p.size);x.globalAlpha=1});if(deathTimer>0){x.fillStyle=`rgba(255,55,70,${Math.min(deathTimer/20,.25)})`;x.fillRect(0,0,c.width,c.height)}
+		}
+		function loop(t){if(!running)return;const mode=modes[difficulty.value],dt=Math.min((t-last)/16.67||1,2);last=t;score+=dt*.22;speed=mode.speed+score/130;d.vy+=mode.gravity*dt;d.y+=d.vy*dt;d.rotation=Math.max(-.15,Math.min(.15,d.vy*.015));if(d.y>=ground-d.h){d.y=ground-d.h;d.vy=0;d.jumps=0;d.rotation=0}if(Math.random()<mode.spawn*dt)obstacles.push({x:c.width+30,y:ground-(48+Math.random()*28),w:52,h:48+Math.random()*28,variant:Math.floor(Math.random()*spikes.length)});if(Math.random()<.012*dt)stars.push({x:c.width+20,y:130+Math.random()*100});obstacles.forEach(o=>o.x-=speed*dt);stars.forEach(s=>s.x-=speed*dt);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.a-=.04});obstacles=obstacles.filter(o=>o.x>-80);stars=stars.filter(s=>s.x>-30);particles=particles.filter(p=>p.a>0);for(const o of obstacles)if(d.x+43>o.x+7&&d.x+10<o.x+o.w-7&&d.y+d.h-8>o.y){end();return}for(let i=stars.length-1;i>=0;i--)if(Math.hypot(d.x+28-stars[i].x,d.y+30-stars[i].y)<32){score+=12;burst(stars[i].x,stars[i].y,'#fff1a5',10);stars.splice(i,1)}scoreEl.textContent=String(Math.floor(score)).padStart(5,'0');draw();requestAnimationFrame(loop)}
+		function end(){running=false;deathTimer=24;d.rotation=Math.PI/2;d.scale=1.25;burst(d.x+28,d.y+30,'#ed3155',25);burst(d.x+28,d.y+30,'#ffcf45',18);best=Math.max(best,Math.floor(score));localStorage.coltBest=best;bestEl.textContent=String(best).padStart(5,'0');title.textContent='Spike tě dostal!';message.textContent=`Coltovo skóre: ${Math.floor(score)} — zkus to znovu!`;start.textContent='HRÁT ZNOVU';overlay.classList.remove('hidden');draw()}
+		start.onclick=reset;addEventListener('keydown',e=>{if(['Space','ArrowUp'].includes(e.code)){e.preventDefault();jump()}});c.addEventListener('pointerdown',jump);draw();
+	</script>
+</body>
+</html>
